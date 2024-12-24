@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Skeiteris</title>
+    <style>
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #FFE4E1; /* Pastel pink */
+            -webkit-touch-callout: none; /* Disable long press on iOS */
+            -webkit-user-select: none; /* Disable text selection on iOS */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
+        }
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        #buttonContainer {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1;
+            display: none;
+        }
+        .gameButton {
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.8;
+            transition: transform 0.1s;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .gameButton:active {
+            transform: scale(0.9);
+        }
+        #musicToggle {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            background-image: url('./music.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1;
+            opacity: 0.8;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: none;
+        }
+        #scoreBoard {
+            position: fixed;
+            top: 40px;
+            left: 40px;
+            background-color: rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            font-size: 36px;
+            font-family: Arial Black, Arial, sans-serif;
+            font-weight: 900;
+            height: 100px;
+            width: 240px;
+            color: #434343;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #timer {
+            position: fixed;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            font-size: 72px;
+            font-family: Arial Black, Arial, sans-serif;
+            font-weight: 900;
+            height: 150px;
+            width: 360px;
+            color: #434343;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #loadingText {
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            color: #434343;
+            margin-bottom: 20px;
+        }
+        #loadingBar {
+            width: 200px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #loadingProgress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        #menuPlayButton {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 200px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            background-image: url('./Play.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1;
+            transition: transform 0.1s;
+        }
+        #menuPlayButton:hover {
+            transform: translateX(-50%) scale(1.1);
+        }
+        #gameOverScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 2;
+            display: none;
+        }
+        #finalScore {
+            font-size: 48px;
+            font-family: Arial Black, Arial, sans-serif;
+            margin-bottom: 20px;
+        }
+        #playAgainButton {
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            background-image: url('./Play.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform 0.1s;
+        }
+        #playAgainButton:hover {
+            transform: scale(1.1);
+        }
+    </style>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+</head>
+<body>
+    <div id="loadingScreen">
+        <div id="loadingText">Loading Game...</div>
+        <div id="loadingBar">
+            <div id="loadingProgress"></div>
+        </div>
+    </div>
+    <audio id="backgroundMusic" loop>
+        <source src="./track.mp3" type="audio/mp3">
+    </audio>
+    <button id="menuPlayButton"></button>
+    <button id="musicToggle"></button>
+    <div id="scoreBoard">Zyn: 0</div>
+    <div id="timer">30</div>
+    <div id="gameOverScreen">
+        <div id="finalScore">Final Score: 0</div>
+        <button id="playAgainButton"></button>
+    </div>
+    <canvas id="renderCanvas"></canvas>
+    <div id="buttonContainer">
+        <button id="leftButton" class="gameButton" style="background-image: url('./Left.png');"></button>
+        <button id="rightButton" class="gameButton" style="background-image: url('./Right.png');"></button>
+        <button id="forwardButton" class="gameButton" style="background-image: url('./Straight.png');"></button>
+    </div>
+    <script>
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const musicToggle = document.getElementById('musicToggle');
+        const menuPlayButton = document.getElementById('menuPlayButton');
+        const buttonContainer = document.getElementById('buttonContainer');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScore = document.getElementById('finalScore');
+        const playAgainButton = document.getElementById('playAgainButton');
+        let isMusicPlaying = false;
+        let gameStarted = false;
+        let timeLeft = 30;
+        let timerInterval;
+        let otterCount = 0;
+
+        function startGame() {
+            menuPlayButton.style.display = 'none';
+            buttonContainer.style.display = 'flex';
+            scoreBoard.style.display = 'flex';
+            timerDisplay.style.display = 'flex';
+            musicToggle.style.display = 'block';
+            gameStarted = true;
+            timeLeft = 30;
+            otterCount = 0;
+            scoreBoard.textContent = 'Zyn: 0';
+            timerDisplay.textContent = timeLeft;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            buttonContainer.style.display = 'none';
+            scoreBoard.style.display = 'none';
+            timerDisplay.style.display = 'none';
+            gameOverScreen.style.display = 'block';
+            finalScore.textContent = `Zyn: ${otterCount}`;
+            gameStarted = false;
+        }
+
+        menuPlayButton.addEventListener('click', startGame);
+        playAgainButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        });
+
+        musicToggle.addEventListener('click', () => {
+            if (isMusicPlaying) {
+                backgroundMusic.pause();
+                musicToggle.style.opacity = "0.5";
+            } else {
+                backgroundMusic.play().catch(error => {
+                    console.log("Audio playback failed:", error);
+                });
+                musicToggle.style.opacity = "1";
+            }
+            isMusicPlaying = !isMusicPlaying;
+        });
+        
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = async function() {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Pastel green
+            const camera = new BABYLON.ArcRotateCamera("camera", 1, 0, 8, BABYLON.Vector3(0, 20, 0), scene);
+            camera.alpha = 1;
+            camera.beta = Math.PI / 4;
+            camera.lowerRadiusLimit = 7;
+            camera.upperRadiusLimit = 7;
+            camera.inputs.attached.pointers.detachControl();
+            camera.inputs.attached.keyboard.detachControl();
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 3, 0), scene);
+
+            loadingProgress.style.width = "30%";
+
+            const idleModel = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "idle.glb", scene);
+            loadingProgress.style.width = "50%";
+            
+            const walkModel = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "walk.glb", scene);
+            loadingProgress.style.width = "70%";
+            
+            const otterModel = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "otter.glb", scene);
+            loadingProgress.style.width = "90%";
+
+            idleModel.meshes.forEach(mesh => {
+                if (mesh.material) {
+                    mesh.material.pointsCloud = true;
+                    mesh.material.pointSize = 11.5;
+                }
+            });
+            walkModel.meshes.forEach(mesh => {
+                if (mesh.material) {
+                    mesh.material.pointsCloud = true;
+                    mesh.material.pointSize = 11.5;
+                }
+            });
+            otterModel.meshes.forEach(mesh => {
+                if (mesh.material) {
+                    mesh.material.pointsCloud = true;
+                    mesh.material.pointSize = 7.5;
+                }
+            });
+
+            walkModel.meshes.forEach(mesh => {
+                mesh.setEnabled(false);
+            });
+
+            const box = BABYLON.MeshBuilder.CreateBox("box", {width: 1, height: 1, depth: 1}, scene);
+            box.position = new BABYLON.Vector3(0, 0, 0);
+            box.visibility = 0;
+
+            idleModel.meshes[0].parent = box;
+            walkModel.meshes[0].parent = box;
+
+            const otters = [];
+
+            // ... in the createScene function ...
+
+           // ... in the createScene function ...
+
+            // Move the original otter model far away instead of disabling it
+            otterModel.meshes[0].position.y = -1000; // Or any large number to move it out of view
+
+            function spawnOtter() {
+                const otterClone = otterModel.meshes[0].clone(`otterClone${otters.length}`);
+                otterClone.position = new BABYLON.Vector3(Math.random() * 20 - 20, 0, Math.random() * 20 - 20);
+                otterClone.rotationQuaternion = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), Math.random() * Math.PI * 2);
+                otterClone.scaling = new BABYLON.Vector3(0.45, 0.45, 0.45);
+                
+                otters.push(otterClone);
+            }
+
+            for (let i = 0; i < 30; i++) {
+                spawnOtter();
+            }
+
+            //otterModel.meshes[0].setEnabled(false);
+
+            const moveSpeed = 0.05;
+            const rotationSpeed = 0.02;
+            const keys = { w: false, a: false, d: false };
+
+            const forwardButton = document.getElementById('forwardButton');
+            const leftButton = document.getElementById('leftButton');
+            const rightButton = document.getElementById('rightButton');
+
+            forwardButton.addEventListener('mousedown', () => keys.w = true);
+            forwardButton.addEventListener('mouseup', () => keys.w = false);
+            forwardButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.w = true;
+            });
+            forwardButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.w = false;
+            });
+
+            leftButton.addEventListener('mousedown', () => keys.a = true);
+            leftButton.addEventListener('mouseup', () => keys.a = false);
+            leftButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.a = true;
+            });
+            leftButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.a = false;
+            });
+
+            rightButton.addEventListener('mousedown', () => keys.d = true);
+            rightButton.addEventListener('mouseup', () => keys.d = false);
+            rightButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.d = true;
+            });
+            rightButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.d = false;
+            });
+
+            window.addEventListener("keydown", (event) => {
+                if (!gameStarted) return;
+                const key = event.key.toLowerCase();
+                if (key in keys) {
+                    keys[key] = true;
+                }
+            });
+
+            window.addEventListener("keyup", (event) => {
+                const key = event.key.toLowerCase();
+                if (key in keys) {
+                    keys[key] = false;
+                }
+            });
+
+            scene.registerBeforeRender(() => {
+                if (!gameStarted) return;
+                
+                const isMoving = keys.w;
+                
+                idleModel.meshes.forEach(mesh => {
+                    mesh.setEnabled(!isMoving);
+                });
+                walkModel.meshes.forEach(mesh => {
+                    mesh.setEnabled(isMoving);
+                });
+
+                if (keys.w) {
+                    const forward = new BABYLON.Vector3(
+                        Math.sin(box.rotation.y),
+                        0,
+                        Math.cos(box.rotation.y)
+                    );
+                    box.position.addInPlace(forward.scale(moveSpeed));
+                }
+                if (keys.a) {
+                    box.rotation.y -= rotationSpeed;
+                }
+                if (keys.d) {
+                    box.rotation.y += rotationSpeed;
+                }
+
+                for (let i = otters.length - 1; i >= 0; i--) {
+                    const otter = otters[i];
+                    const distance = BABYLON.Vector3.Distance(box.position, otter.position);
+                    
+                    if (distance < 0.5) {
+                        otter.dispose();
+                        otters.splice(i, 1);
+                        otterCount++;
+                        scoreBoard.textContent = `Zyn: ${otterCount}`;
+                        spawnOtter();
+                    }
+                }
+
+                camera.target = box.position.clone().add(new BABYLON.Vector3(0, 0.5, 0));
+                camera.alpha = 1;
+                camera.beta = Math.PI / 4;
+            });
+
+            loadingProgress.style.width = "100%";
+            setTimeout(() => {
+                loadingScreen.style.display = "none";
+            }, 500);
+
+            return scene;
+        }
+
+        createScene().then(scene => {
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+        });
+
+        window.addEventListener("resize", () => {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
